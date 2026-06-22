@@ -1,210 +1,439 @@
 import os
 from datetime import datetime
+
 from telebot.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     WebAppInfo,
 )
 
+
 from bot.clients import bot, BOT_INFO, store
-from bot.config import COMMIT_SHA, HF_SPACE_ID, HOSTING_LABEL, MODEL, RATE_LIMIT
+
+from bot.config import (
+    COMMIT_SHA,
+    HF_SPACE_ID,
+    HOSTING_LABEL,
+    MODEL,
+    RATE_LIMIT,
+)
+
 from bot.ai import ask_ai
-from bot.helpers import is_allowed, keep_typing, send_reply, should_respond
+from bot.helpers import (
+    is_allowed,
+    keep_typing,
+    send_reply,
+    should_respond,
+)
 from bot.history import clear_history
 from bot.preferences import get_provider, set_provider
 from bot.rate_limit import is_rate_limited
-
-VERBOSE_LOG = os.environ.get("BOT_VERBOSE_LOG", "").strip().lower() in (
-    "1",
-    "true",
-    "yes",
-    "on",
-)
-
-
-def _log(message, direction: str, text: str) -> None:
-    if not VERBOSE_LOG:
-        return
-
-    user = message.from_user
-    user_name = (
-        f"@{user.username}" if user.username else (user.first_name or f"user:{user.id}")
-    )
-    bot_name = f"@{BOT_INFO.username}"
-
-    snippet = (text or "").replace("\n", " ").replace("\r", " ")
-    if len(snippet) > 500:
-        snippet = snippet[:500] + "..."
-
-    if direction == "in":
-        sender, receiver = user_name, bot_name
-    else:
-        sender, receiver = bot_name, user_name
-
-    ts = datetime.now().strftime("%H:%M:%S")
-    print(f"[{ts}] {sender} → {receiver}: {snippet}", flush=True)
-
-
-
 @bot.message_handler(commands=["start"], func=is_allowed)
 def cmd_start(message):
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(
+        resize_keyboard=True,
+        row_width=2
+    )
+
 
     markup.add(
         KeyboardButton(
-            text="🎬 Open Mini App",
+            text="🎬 Բացել Mini App",
             web_app=WebAppInfo("https://your-domain.com")
         )
     )
 
+
+    markup.add(
+        KeyboardButton("🤖 AI"),
+        KeyboardButton("👤 Իմ պրոֆիլը")
+    )
+
+    markup.add(
+        KeyboardButton("⭐ Premium"),
+        KeyboardButton("❤️ Ընտրյալներ")
+    )
+
+
+    markup.add(
+        KeyboardButton("🎁 Բոնուսներ"),
+        KeyboardButton("🎮 Խաղեր")
+    )
+
+
+    markup.add(
+        KeyboardButton("📺 Նորություններ"),
+        KeyboardButton("📥 Ներբեռնումներ")
+    )
+
+    markup.add(
+        KeyboardButton("📂 Պատմություն"),
+        KeyboardButton("💳 Վճարումներ")
+    )
+
+    markup.add(
+        KeyboardButton("🔔 Ծանուցումներ"),
+        KeyboardButton("🌙 Գիշերային ռեժիմ")
+    )
+
+    markup.add(
+        KeyboardButton("🌐 Լեզու"),
+        KeyboardButton("⚙️ Կարգավորումներ")
+    )
+
+    markup.add(
+        KeyboardButton("📢 Մեր ալիքը"),
+        KeyboardButton("📞 Կապ")
+    )
+
+    # Row 9
+    markup.add(
+        KeyboardButton("ℹ️ Օգնություն")
+    )
+
     bot.send_message(
         message.chat.id,
-        """
-🎬 Welcome!
+        f"""
+🎉 <b>Բարի գալուստ, {message.from_user.first_name}։</b>
 
-Open the Mini App to browse movies and series.
+🤖 AI Օգնական
 
-👇 Press the button below.
-        """,
-        reply_markup=markup,
+🎬 Mini App
+
+⭐ Premium
+
+❤️ Ընտրյալներ
+
+📺 Նորություններ
+
+🎁 Բոնուսներ
+
+👇 Ընտրեք ցանկալի բաժինը։
+""",
+        parse_mode="HTML",
+        reply_markup=markup
     )
+
+
 
 
 @bot.message_handler(commands=["help"], func=is_allowed)
 def cmd_help(message):
-    lines = [
-        "/start — welcome message",
-        "/help — show this message",
-        "/reset — clear conversation history",
-        "/about — about this bot",
-        "/menu — show menu",
-    ]
+    bot.send_message(
+        message.chat.id,
+        """
+📖 <b>Օգնություն</b>
 
-    if HF_SPACE_ID:
-        lines.append("/model — switch AI provider")
+🟢 /start - Գլխավոր էջ
 
-    bot.send_message(message.chat.id, "\n".join(lines))
+♻️ /reset - Մաքրել հիշողությունը
 
+ℹ️ /about - Տեղեկություն բոտի մասին
 
+⚙️ /model - AI մոդելի ընտրություն
 
-
-@bot.message_handler(commands=["reset"], func=is_allowed)
-def cmd_reset(message):
-    clear_history(message.from_user.id)
-    bot.send_message(message.chat.id, "Conversation cleared. Starting fresh!")
-
-
-
-@bot.message_handler(commands=["about"], func=is_allowed)
-def cmd_about(message):
-    if HF_SPACE_ID:
-        provider = get_provider(message.from_user.id)
-        model_line = (
-            f"{MODEL} (main)"
-            if provider == "main"
-            else f"{HF_SPACE_ID} (hf)"
-        )
-    else:
-        model_line = MODEL
-
-    storage_line = "SQLite" if store is not None else "stateless (no memory)"
-
-    lines = [
-        f"Model  : {model_line}",
-        f"Storage: {storage_line}",
-        f"Hosting: {HOSTING_LABEL}",
-    ]
-
-    if COMMIT_SHA:
-        lines.append(f"Version: {COMMIT_SHA}")
-
-    bot.send_message(message.chat.id, "\n".join(lines))
+📞 Հարցերի դեպքում գրեք մեզ։
+""",
+        parse_mode="HTML"
+    )
 
 
 
 
-if HF_SPACE_ID:
+@bot.message_handler(func=lambda m: m.text == "👤 Իմ պրոֆիլը")
+def profile(message):
 
-    @bot.message_handler(commands=["model"], func=is_allowed)
-    def cmd_model(message):
-        parts = (message.text or "").split(maxsplit=1)
+    bot.send_message(
+        message.chat.id,
+        f"""
+👤 <b>Իմ պրոֆիլը</b>
 
-        if len(parts) == 1:
-            current = get_provider(message.from_user.id)
+🆔 ID
+<code>{message.from_user.id}</code>
 
-            bot.send_message(
-                message.chat.id,
-                f"Current provider: {current}\n\n"
-                "Options:\n"
-                "/model main — Cerebras\n"
-                "/model hf — ArmGPT",
-            )
-            return
+👤 Անուն
+{message.from_user.first_name}
 
-        choice = parts[1].strip().lower()
+⭐ Premium
+❌ Չկա
 
-        if choice not in ("main", "hf"):
-            bot.send_message(
-                message.chat.id,
-                "Invalid choice. Use: /model main or /model hf",
-            )
-            return
+❤️ Ընտրյալներ
+0
 
-        if not set_provider(message.from_user.id, choice):
-            bot.send_message(
-                message.chat.id,
-                "Could not save preference.",
-            )
-            return
+📺 Դիտվածներ
+0
 
-        if choice == "hf":
-            bot.send_message(
-                message.chat.id,
-                "Switched to ArmGPT.",
-            )
-        else:
-            bot.send_message(
-                message.chat.id,
-                "Switched to Main Provider.",
-            )
+📅 Գրանցում
+Այսօր
+""",
+        parse_mode="HTML"
+    )
 
 
 
 
-@bot.message_handler(content_types=["text"], func=is_allowed)
-def handle_message(message):
-    if not should_respond(message):
-        return
+@bot.message_handler(func=lambda m: m.text == "⭐ Premium")
+def premium(message):
 
-    text = (message.text or "").replace(f"@{BOT_INFO.username}", "").strip()
+    bot.send_message(
+        message.chat.id,
+        """
+💎 <b>Premium</b>
 
-    if not text:
-        return
+✅ Առանց գովազդի
 
-    _log(message, "in", text)
+✅ Full HD
 
-    if is_rate_limited(message.from_user.id):
-        limit_msg = (
-            f"You've reached the daily limit of {RATE_LIMIT} messages."
-        )
+✅ Արագ սպասարկում
 
-        bot.send_message(message.chat.id, limit_msg)
-        _log(message, "out", limit_msg)
-        return
+✅ Վաղ հասանելիություն
 
-    try:
-        with keep_typing(message.chat.id):
-            reply = ask_ai(message.from_user.id, text)
+✅ Premium բաժին
 
-        send_reply(message, reply)
-        _log(message, "out", reply)
+💳 Շուտով հնարավոր կլինի գնել։
+""",
+        parse_mode="HTML"
+    )
 
-    except Exception as e:
-        print(f"Error: {e}")
 
-        bot.send_message(
-            message.chat.id,
-            "Something went wrong. Please try again.",
-        )
 
-        _log(message, "out", f"[error] {e}")
+
+@bot.message_handler(func=lambda m: m.text == "❤️ Ընտրյալներ")
+def favorites(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+❤️ <b>Ընտրյալներ</b>
+
+Դուք դեռ չունեք ընտրյալներ։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "🎁 Բոնուսներ")
+def bonus(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+🎁 <b>Բոնուսներ</b>
+
+🎉 Ամեն օր ստացեք բոնուսներ։
+
+⭐ Premium օգտատերերը ստանում են կրկնակի բոնուս։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "🎮 Խաղեր")
+def games(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+🎮 <b>Խաղեր</b>
+
+Շուտով այստեղ կլինեն Telegram Mini Games։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+@bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
+def news(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+📺 <b>Նորություններ</b>
+
+Այս պահին նորություններ չկան։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "📥 Ներբեռնումներ")
+def downloads(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+📥 <b>Ներբեռնումներ</b>
+
+Դուք դեռ ոչինչ չեք ներբեռնել։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "📂 Պատմություն")
+def history(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+📂 <b>Պատմություն</b>
+
+Դիտումների պատմությունը դատարկ է։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+@bot.message_handler(func=lambda m: m.text == "💳 Վճարումներ")
+def payments(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+💳 <b>Վճարումներ</b>
+
+Idram
+
+Telcell
+
+EasyPay
+
+Bank Card
+
+Telegram Stars
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "🔔 Ծանուցումներ")
+def notifications(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+🔔 <b>Ծանուցումներ</b>
+
+✅ Նոր սերիաներ
+
+✅ Նոր ֆիլմեր
+
+✅ Premium առաջարկներ
+""",
+        parse_mode="HTML"
+    )
+
+
+
+@bot.message_handler(func=lambda m: m.text == "🌙 Գիշերային ռեժիմ")
+def dark_mode(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+🌙 <b>Գիշերային ռեժիմ</b>
+
+Շուտով հասանելի կլինի։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "🌐 Լեզու")
+def language(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+🌐 <b>Լեզու</b>
+
+🇦🇲 Հայերեն
+
+🇬🇧 English
+
+🇷🇺 Русский
+
+Շուտով հնարավոր կլինի փոխել։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "⚙️ Կարգավորումներ")
+def settings(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+⚙️ <b>Կարգավորումներ</b>
+
+🤖 AI
+
+🌐 Լեզու
+
+🌙 Թեմա
+
+🔔 Ծանուցումներ
+
+💾 Հիշողություն
+""",
+        parse_mode="HTML"
+    )
+
+
+
+@bot.message_handler(func=lambda m: m.text == "📢 Մեր ալիքը")
+def channel(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+📢 <b>Մեր ալիքը</b>
+
+Այստեղ կարող եք տեղադրել ձեր Telegram Channel-ի հղումը։
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "📞 Կապ")
+def contact(message):
+
+    bot.send_message(
+        message.chat.id,
+        """
+📞 <b>Կապ</b>
+
+📧 Email:
+support@example.com
+
+💬 Telegram:
+@username
+""",
+        parse_mode="HTML"
+    )
+
+
+
+
+@bot.message_handler(func=lambda m: m.text == "ℹ️ Օգնություն")
+def help_button(message):
+    cmd_help(message)
