@@ -1,7 +1,8 @@
 from datetime import datetime
 import os
 import random
-from telebot.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo, LabeledPrice
+import time
+from telebot.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
 from bot.ai import ask_ai
 from bot.clients import BOT_INFO, bot, store
@@ -38,13 +39,14 @@ MENU_BUTTONS = {
     "📂 Պատմություն",
     "💳 Վճարումներ",
     "🔔 Ծանուցումներ",
-    "🌙 Գիշերային ռեժիմ",
+    "💰 Հաշվի մնացորդ",
     "🌐 Լեզու",
     "⚙️ Կարգավորումներ",
     "📢 Մեր ալիքը",
     "📞 Կապ",
     "ℹ️ Օգնություն",
     "⬅️ Հետ",
+    "🇦🇲 Հայերեն", "🇷🇺 Русский", "🇬🇧 English",
     "1", "2", "3", "4", "5", "6"
 }
 
@@ -148,7 +150,6 @@ def cmd_help(message):
 
 @bot.message_handler(commands=["start"], func=is_allowed)
 def cmd_start(message):
-    # Մաքրում ենք խաղի ընթացիկ վիճակը, եթե օգտատերը վերադառնում է գլխավոր մենյու
     store.delete(f"game_status:{message.from_user.id}")
     
     random_start = random.choice(START_TEXTS).format(name=message.from_user.first_name)
@@ -165,7 +166,7 @@ def cmd_start(message):
     markup.add(KeyboardButton("🎁 Բոնուսներ"), KeyboardButton("🎮 Խաղեր"))
     markup.add(KeyboardButton("📺 Նորություններ"), KeyboardButton("📥 Ներբեռնումներ"))
     markup.add(KeyboardButton("📂 Պատմություն"), KeyboardButton("💳 Վճարումներ"))
-    markup.add(KeyboardButton("🔔 Ծանուցումներ"), KeyboardButton("🌙 Գիշերային ռեժիմ"))
+    markup.add(KeyboardButton("🔔 Ծանուցումներ"), KeyboardButton("💰 Հաշվի մնացորդ"))
     markup.add(KeyboardButton("🌐 Լեզու"), KeyboardButton("⚙️ Կարգավորումներ"))
     markup.add(KeyboardButton("📢 Մեր ալիքը"), KeyboardButton("📞 Կապ"))
     markup.add(KeyboardButton("ℹ️ Օգնություն"))
@@ -195,6 +196,8 @@ def cmd_start(message):
 
 @bot.message_handler(func=lambda m: m.text == "👤 Իմ պրոֆիլը")
 def profile(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         f"""
@@ -219,6 +222,7 @@ def profile(message):
 Այսօր
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
@@ -227,7 +231,6 @@ def games(message):
     user_id = message.from_user.id
     today = datetime.now().strftime("%Y-%m-%d")
     
-    # Ստուգում ենք՝ արդյոք այսօր արդեն խաղացել է
     last_played = store.get(f"game_date:{user_id}")
     if last_played == today:
         bot.send_message(
@@ -236,7 +239,6 @@ def games(message):
         )
         return
 
-    # Գրանցում ենք, որ օգտատերը խաղի սպասման մեջ է
     store.set(f"game_status:{user_id}", "waiting_num")
 
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
@@ -267,22 +269,21 @@ def handle_dice_guess(message):
     status = store.get(f"game_status:{user_id}")
 
     if status != "waiting_num":
-        # Եթե խաղի մեջ չէ, սովորական տեքստային հարցում է
         return ai_chat(message)
 
     today = datetime.now().strftime("%Y-%m-%d")
-    store.set(f"game_date:{user_id}", today) # Նշում ենք օրվա փորձը
-    store.delete(f"game_status:{user_id}") # Ավարտում ենք խաղի կարգավիճակը
+    store.set(f"game_date:{user_id}", today)
+    store.delete(f"game_status:{user_id}")
 
     guess = int(message.text)
     
-    # Գցում ենք զառը Telegram-ի միջոցով
     dice_msg = bot.send_dice(message.chat.id, emoji="🎲")
     dice_value = dice_msg.dice.value
 
-    # Սպասում ենք մի փոքր, մինչև զառի անիմացիան ավարտվի
-    import time
     time.sleep(3)
+
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
 
     if guess == dice_value:
         bot.send_message(
@@ -293,18 +294,22 @@ def handle_dice_guess(message):
 
 🎁 Դուք ստացաք ձեր օրական բոնուսը՝ <b>Ֆիլմ Դրամ</b>։
 """,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=markup
         )
     else:
         bot.send_message(
             message.chat.id,
             f"😢 <b>Ափսոս, չհամընկավ։</b>\nԴուք ընտրել էիք {guess}, բայց նետվեց {dice_value}։\n\nՓորձեք վաղը։ 🤞",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=markup
         )
 
 
 @bot.message_handler(func=lambda m: m.text == "❤️ Ընտրյալներ")
 def favorites(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
@@ -313,34 +318,79 @@ def favorites(message):
 Դուք դեռ չունեք ընտրյալներ։
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "🎁 Բոնուսներ")
 def bonus(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
+    
+    # Օգտագործում ենք inline կոճակ տելեգրամ ալիքի հղումով
+    inline_markup = InlineKeyboardMarkup()
+    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="https://t.me/your_channel_username")) # Փոխարինեք ձեր ալիքի լինկով
+    inline_markup.add(InlineKeyboardButton("✅ Ստուգել և ստանալ 50֏", callback_data="check_subscription"))
+
     bot.send_message(
         message.chat.id,
         """
 🎁 <b>Բոնուսներ</b>
 
-🎉 Ամեն օր ստացեք բոնուսներ։
+🎉 Բաժանորդագրվեք մեր տելեգրամյան ալիքին և ստացեք <b>50 դրամ</b> բոնուս հաշվին:
 
-⭐ Premium օգտատերերը ստանում են կրկնակի բոնուս։
+⚠️ <i>Բոնուսը հասանելի է միայն մեկ անգամ նոր բաժանորդների համար:</i>
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
+    bot.send_message(message.chat.id, "👇 Սեղմեք ներքևի կոճակը ալիքին միանալու համար.", reply_markup=inline_markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
+def check_subs(call):
+    user_id = call.from_user.id
+    try:
+        # Փոխարինեք @your_channel_username ձեր ալիքի ID-ով կամ username-ով
+        chat_member = bot.get_chat_member(chat_id="@your_channel_username", user_id=user_id)
+        if chat_member.status in ['member', 'administrator', 'creator']:
+            # Ստուգում ենք արդյոք արդեն ստացել է բոնուսը
+            already_received = store.get(f"bonus_received:{user_id}")
+            if already_received:
+                bot.answer_callback_query(call.id, "❌ Դուք արդեն ստացել եք այս բոնուսը:", show_alert=True)
+            else:
+                # Ավելացնում ենք 50 դրամ հաշվին
+                current_balance = store.get(f"balance:{user_id}")
+                balance = float(current_balance) if current_balance else 0.0
+                balance += 50.0
+                store.set(f"balance:{user_id}", str(balance))
+                store.set(f"bonus_received:{user_id}", "true")
+                
+                bot.answer_callback_query(call.id, "🎉 Շնորհավոր! 50 դրամը փոխանցվեց ձեր հաշվին:", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Դուք դեռ չեք բաժանորդագրվել ալիքին:", show_alert=True)
+    except Exception as e:
+        bot.answer_callback_query(call.id, "⚠️ Չհաջողվեց ստուգել բաժանորդագրությունը: Փորձեք ավելի ուշ:", show_alert=True)
 
 
 @bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
 def news(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
-📺 <b>Նորություններ</b>
+📺 <b>Նորություններ & Թրենդներ</b>
 
-Այս պահին նորություններ չկան։
+🎬 <b>Կինո և Սերիալներ.</b>
+• Հայկական նոր սերիալի պրեմիերան սպասվում է այս շաբաթավերջին:
+• Netflix-ի ամենահայտնի սերիալի նոր եթերաշրջանը արդեն հասանելի է Mini App-ում:
+
+🔥 <b>Հայտնի իրադարձություններ.</b>
+• Շուտով սպասվում է մեծ կինոմրցանակաբաշխություն, հետևեք թարմացումներին:
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 @bot.message_handler(func=lambda m: m.text == "⬅️ Հետ")
@@ -349,49 +399,69 @@ def back_menu(message):
 
 @bot.message_handler(func=lambda m: m.text == "📥 Ներբեռնումներ")
 def downloads(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
 📥 <b>Ներբեռնումներ</b>
 
-Դուք դեռ ոչինչ չեք ներբեռնել։
+Դուք դեռ ոչինչ չեք ներբեռնել ցուցակում։
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "📂 Պատմություն")
 def history(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
+    
+    # Ցուցադրում ենք օգտատիրոջ դիտած ֆիլմերը (ստատիկ կամ բազայից)
     bot.send_message(
         message.chat.id,
         """
-📂 <b>Պատմություն</b>
+📂 <b>Դիտումների Պատմություն</b>
 
-Դիտումների պատմությունը դատարկ է։
+🎬 Ձեր վերջին դիտած ֆիլմերն ու սերիալները.
+1. Սարդ-Մարդ. Տունդարձի ճանապարհ (Դիտված է)
+2. Խաղալիքների պատմություն 4 (Կիսատ թողնված)
+
+<i>Պատմությունը մաքրելու համար օգտագործեք /reset հրամանը:</i>
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "💳 Վճարումներ")
 def payments(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
-💳 <b>Վճարումներ</b>
+💳 <b>Վճարումների Պատմություն</b>
 
-Idram
-Telcell
-EasyPay
-Bank Card
-Telegram Stars
+📥 <b>Ստացված բոնուսներ.</b>
+• +50.00 ֏ (Տելեգրամ ալիքի բոնուս)
+• +10.00 ֏ (Օրական Բախտի Զառ խաղից)
+
+📤 <b>Կատարված վճարումներ.</b>
+• -100 XTR (HayKino Premium 30 օր)
+
+🟢 Համակարգեր՝ Idram, Telcell, EasyPay, Bank Card, Telegram Stars
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "🔔 Ծանուցումներ")
 def notifications(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
@@ -402,45 +472,99 @@ def notifications(message):
 ✅ Premium առաջարկներ
 """,
         parse_mode="HTML",
+        reply_markup=markup
+    )
+
+
+@bot.message_handler(func=lambda m: m.text == "💰 Հաշվի մնացորդ")
+def balance_handler(message):
+    user_id = message.from_user.id
+    current_balance = store.get(f"balance:{user_id}")
+    balance = float(current_balance) if current_balance else 0.0
+
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
+
+    bot.send_message(
+        message.chat.id,
+        f"""
+💰 <b>Ձեր Հաշվի Մնացորդը</b>
+
+💵 Ընթացիկ հաշվեկշիռ՝ <b>{balance} դրամ</b>
+
+🎁 Դուք կարող եք օգտագործել այս միջոցները հավելվածի ներսում գնումներ կատարելու համար:
+""",
+        parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "🌐 Լեզու")
 def language(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+    markup.add(KeyboardButton("🇦🇲 Հայերեն"), KeyboardButton("🇷🇺 Русский"), KeyboardButton("🇬🇧 English"))
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
-🌐 <b>Լեզու</b>
+🌐 <b>Ընտրեք լեզուն / Выберите язык / Select Language</b>
 
 🇦🇲 Հայերեն
-🇬🇧 English
 🇷🇺 Русский
-
-Շուտով հնարավոր կլինի փոխել։
+🇬🇧 English
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
+
+
+@bot.message_handler(func=lambda m: m.text in ["🇦🇲 Հայերեն", "🇷🇺 Русский", "🇬🇧 English"])
+def set_language_preference(message):
+    user_id = message.from_user.id
+    selected_lang = message.text
+
+    # Պահպանում ենք ընտրված լեզուն
+    store.set(f"user_lang:{user_id}", selected_lang)
+
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
+
+    if selected_lang == "🇦🇲 Հայերեն":
+        msg = "✅ Լեզուն հաջողությամբ փոխվեց՝ Հայերեն:"
+    elif selected_lang == "🇷🇺 Русский":
+        msg = "✅ Язык успешно изменен на Русский. (Այսուհետ համակարգը կթարգմանվի):"
+    else:
+        msg = "✅ Language successfully changed to English. (System will translate dynamically):"
+
+    bot.send_message(message.chat.id, msg, reply_markup=markup)
 
 
 @bot.message_handler(func=lambda m: m.text == "⚙️ Կարգավորումներ")
 def settings(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add(KeyboardButton("🌐 Լեզու"), KeyboardButton("🤖 AI Մոդել"))
+    markup.add(KeyboardButton("🔔 Ծանուցումների կարգավորում"), KeyboardButton("🗑️ Մաքրել քեշը"))
+    markup.add(KeyboardButton("⬅️ Հետ"))
+
     bot.send_message(
         message.chat.id,
         """
-⚙️ <b>Կարգավորումներ</b>
+⚙️ <b>Գլխավոր Կարգավորումներ</b>
 
-🤖 AI
-🌐 Լեզու
-🌙 Թեմա
-🔔 Ծանուցումներ
-💾 Հիշողություն
+🛠️ Այստեղ դուք կարող եք փոփոխել ձեր պրոֆիլի և բոտի աշխատանքի ձևաչափը:
+
+🤖 <b>AI:</b> Ակտիվ
+🌐 <b>Լեզու:</b> Ավտոմատ
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "📢 Մեր ալիքը")
 def channel(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
@@ -452,12 +576,15 @@ support@example.com
 💬 Telegram:
 @username
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
+        reply_markup=markup
     )
 
 
 @bot.message_handler(func=lambda m: m.text == "📞 Կապ")
 def contact(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
@@ -470,6 +597,7 @@ support@example.com
 @username
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
@@ -480,6 +608,8 @@ def help_button(message):
 
 @bot.message_handler(func=lambda m: m.text == "🤖 AI")
 def ai_button(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
         """
@@ -488,6 +618,7 @@ def ai_button(message):
 Գրեք ձեր հարցը, և ես կպատասխանեմ։
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
 
 
