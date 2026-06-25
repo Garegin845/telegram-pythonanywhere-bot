@@ -155,12 +155,7 @@ def cmd_start(message):
     random_start = random.choice(START_TEXTS).format(name=message.from_user.first_name)
 
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    markup.add(
-        KeyboardButton(
-            text="🎬 Բացել Mini App",
-            web_app=WebAppInfo("https://d509-185-86-193-63.ngrok-free.app"),
-        )
-    )
+   
     markup.add(KeyboardButton("🤖 AI"), KeyboardButton("👤 Իմ պրոֆիլը"))
     markup.add(KeyboardButton("⭐ Premium"), KeyboardButton("❤️ Ընտրյալներ"))
     markup.add(KeyboardButton("🎁 Բոնուսներ"), KeyboardButton("🎮 Խաղեր"))
