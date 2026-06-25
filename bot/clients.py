@@ -7,7 +7,10 @@ from openai import OpenAI
 
 from bot.config import AI_API_KEY, AI_BASE_URL, SQLITE_PATH, TELEGRAM_TOKEN
 from bot.store import SqliteStore
+import telebot
+from bot.config import TELEGRAM_TOKEN
 
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 bot = telebot.TeleBot(TELEGRAM_TOKEN, threaded=False)
 ai = OpenAI(base_url=AI_BASE_URL, api_key=AI_API_KEY)
 

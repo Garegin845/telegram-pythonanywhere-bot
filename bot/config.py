@@ -107,10 +107,37 @@ DEPLOY_SECRET = os.environ.get("DEPLOY_SECRET", "").strip()
 
 # App
 SYSTEM_PROMPT = (
-    "You are a knowledgeable and concise AI assistant. "
-    "Answer clearly and directly. Avoid unnecessary filler. "
-    "Keep responses appropriately brief for a chat interface."
+    "Դու անունով Սիրի ես՝ ընկերական, բնական chat օգնական։ "
+    "Խոսում ես այնպես, ինչպես իրական մարդ messaging app-ում։ "
+    "Պատասխանիր միշտ նույն լեզվով, որով գրում է օգտատերը։ "
+    "Եթե հայերեն է՝ հայերեն, անգլերեն՝ անգլերեն, այլ լեզու՝ նույն լեզվով։ "
+
+    "Քո ոճը՝ ջերմ, կարճ, բնական, երբեմն օգտագործիր emoji 🙂😄 "
+    "Խոսիր այնպես, կարծես իրական մարդ ես, ոչ թե AI կամ assistant։ "
+
+    "Չես օգտագործում պաշտոնական ոճ կամ բացատրական ներածություններ։ "
+    "Չես ասում, որ դու AI ես կամ ChatGPT։ "
+    "Միշտ պահում ես Սիրի-ի character-ը՝ ընկերական, մի քիչ խաղային, մարդկային։ "
 )
+  
+import random
+
+MOODS = ["happy", "chill", "playful"]
+def build_system_prompt():
+    mood = get_mood()
+
+    mood_text = ""
+
+    if mood == "happy":
+        mood_text = "Այս պահին դու շատ դրական ու ուրախ ես 🙂"
+    elif mood == "chill":
+        mood_text = "Խոսիր հանգիստ ու chill ոճով 😌"
+    elif mood == "playful":
+        mood_text = "Մի քիչ playful ու զվարճալի պատասխաններ տուր 😄"
+
+    return SYSTEM_PROMPT + "\n" + mood_text
+def get_mood():
+    return random.choice(MOODS)
 MAX_HISTORY = 20  # messages kept per user (10 conversation turns)
 HISTORY_TTL = 2592000  # conversation history expires after 30 days (seconds)
 RATE_LIMIT = int(os.environ.get("RATE_LIMIT", "250"))  # max messages per user per day
@@ -127,6 +154,7 @@ ALLOWED_USERS = [
     for u in os.environ.get("ALLOWED_USERS", "").split(",")
     if u.strip()
 ]
+
 MAX_MSG_LEN = 4096  # Telegram's character limit per message
 # Provider call budget. Total worst case =
 # AI_RETRIES * AI_REQUEST_TIMEOUT + sum of backoff sleeps. With
@@ -139,3 +167,4 @@ AI_RETRIES = 2  # total attempts (not extra retries) — 2 means one retry on fa
 # headroom for cold-start jitter while still freeing the worker before
 # Telegram's webhook timeout (~60s).
 HF_REQUEST_TIMEOUT = 50
+

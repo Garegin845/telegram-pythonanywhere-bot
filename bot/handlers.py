@@ -1,127 +1,68 @@
-import os
 from datetime import datetime
-
-from telebot.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    WebAppInfo,
-)
-
-
-from bot.clients import bot, BOT_INFO, store
-
-from bot.config import (
-    COMMIT_SHA,
-    HF_SPACE_ID,
-    HOSTING_LABEL,
-    MODEL,
-    RATE_LIMIT,
-)
+import os
+import random
+from telebot.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 
 from bot.ai import ask_ai
-from bot.helpers import (
-    is_allowed,
-    keep_typing,
-    send_reply,
-    should_respond,
-)
+from bot.clients import BOT_INFO, bot, store
+from bot.config import COMMIT_SHA, HF_SPACE_ID, HOSTING_LABEL, MODEL, RATE_LIMIT
+from bot.helpers import is_allowed, keep_typing, send_reply, should_respond
 from bot.history import clear_history
 from bot.preferences import get_provider, set_provider
 from bot.rate_limit import is_rate_limited
-@bot.message_handler(commands=["start"], func=is_allowed)
-def cmd_start(message):
-    markup = ReplyKeyboardMarkup(
-        resize_keyboard=True,
-        row_width=2
-    )
+
+START_TEXTS = [
+    "🎉 Բարի գալուստ, {name} 🙂",
+    "👋 Հեյ {name}, արի սկսենք 😄",
+    "✨ Ողջույն {name}, պատրաստ եմ օգնել քեզ",
+    "🚀 Բարի գալուստ {name}, ինչով սկսենք?",
+]
+
+HELP_TEXTS = [
+    "📖 Օգնություն այստեղ է 🙂 ինչ ուզում ես հարցրու",
+    "ℹ️ Կարող ես ինձ գրել ցանկացած բան 😄",
+    "🧠 Ես կօգնեմ քեզ ինչ հարց էլ լինի",
+    "💬 Գրիր ու կպատասխանեմ բնական ձևով",
+    
+]
+
+MENU_BUTTONS = {
+    "🎬 Բացել Mini App",
+    "🤖 AI",
+    "👤 Իմ պրոֆիլը",
+    "⭐ Premium",
+    "❤️ Ընտրյալներ",
+    "🎁 Բոնուսներ",
+    "🎮 Խաղեր",
+    "📺 Նորություններ",
+    "📥 Ներբեռնումներ",
+    "📂 Պատմություն",
+    "💳 Վճարումներ",
+    "🔔 Ծանուցումներ",
+    "🌙 Գիշերային ռեժիմ",
+    "🌐 Լեզու",
+    "⚙️ Կարգավորումներ",
+    "📢 Մեր ալիքը",
+    "📞 Կապ",
+    "ℹ️ Օգնություն",
+}
 
 
-    markup.add(
-        KeyboardButton(
-            text="🎬 Բացել Mini App",
-            web_app=WebAppInfo("https://your-domain.com")
-        )
-    )
-
-
-    markup.add(
-        KeyboardButton("🤖 AI"),
-        KeyboardButton("👤 Իմ պրոֆիլը")
-    )
-
-    markup.add(
-        KeyboardButton("⭐ Premium"),
-        KeyboardButton("❤️ Ընտրյալներ")
-    )
-
-
-    markup.add(
-        KeyboardButton("🎁 Բոնուսներ"),
-        KeyboardButton("🎮 Խաղեր")
-    )
-
-
-    markup.add(
-        KeyboardButton("📺 Նորություններ"),
-        KeyboardButton("📥 Ներբեռնումներ")
-    )
-
-    markup.add(
-        KeyboardButton("📂 Պատմություն"),
-        KeyboardButton("💳 Վճարումներ")
-    )
-
-    markup.add(
-        KeyboardButton("🔔 Ծանուցումներ"),
-        KeyboardButton("🌙 Գիշերային ռեժիմ")
-    )
-
-    markup.add(
-        KeyboardButton("🌐 Լեզու"),
-        KeyboardButton("⚙️ Կարգավորումներ")
-    )
-
-    markup.add(
-        KeyboardButton("📢 Մեր ալիքը"),
-        KeyboardButton("📞 Կապ")
-    )
-
-    # Row 9
-    markup.add(
-        KeyboardButton("ℹ️ Օգնություն")
-    )
-
-    bot.send_message(
-        message.chat.id,
-        f"""
-🎉 <b>Բարի գալուստ, {message.from_user.first_name}։</b>
-
-🤖 AI Օգնական
-
-🎬 Mini App
-
-⭐ Premium
-
-❤️ Ընտրյալներ
-
-📺 Նորություններ
-
-🎁 Բոնուսներ
-
-👇 Ընտրեք ցանկալի բաժինը։
-""",
-        parse_mode="HTML",
-        reply_markup=markup
-    )
-
-
+# ==========================
+# COMMAND HANDLERS
+# ==========================
 
 
 @bot.message_handler(commands=["help"], func=is_allowed)
 def cmd_help(message):
+    # Ընտրում է պատահական տեքստ HELP_TEXTS-ից
+    random_help = random.choice(HELP_TEXTS)
+    
     bot.send_message(
         message.chat.id,
-        """
+        f"""
+{random_help}
+
 📖 <b>Օգնություն</b>
 
 🟢 /start - Գլխավոր էջ
@@ -132,17 +73,68 @@ def cmd_help(message):
 
 ⚙️ /model - AI մոդելի ընտրություն
 
+/quote - ✨ Ոգեշնչող միտք
+
+/joke - 😂 Զվարճալի անեկդոտ
+
 📞 Հարցերի դեպքում գրեք մեզ։
 """,
-        parse_mode="HTML"
+
+        parse_mode="HTML",
     )
 
 
+@bot.message_handler(commands=["start"], func=is_allowed)
+def cmd_start(message):
+    # Ընտրում է պատահական ողջույն START_TEXTS-ից
+    random_start = random.choice(START_TEXTS).format(name=message.from_user.first_name)
+
+    # Ստեղծում ենք գլխավոր մենյուն
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+
+    markup.add(
+        KeyboardButton(
+            text="🎬 Բացել Mini App",
+            web_app=WebAppInfo("https://d509-185-86-193-63.ngrok-free.app"),
+        )
+    )
+    markup.add(KeyboardButton("🤖 AI"), KeyboardButton("👤 Իմ պրոֆիլը"))
+    markup.add(KeyboardButton("⭐ Premium"), KeyboardButton("❤️ Ընտրյալներ"))
+    markup.add(KeyboardButton("🎁 Բոնուսներ"), KeyboardButton("🎮 Խաղեր"))
+    markup.add(KeyboardButton("📺 Նորություններ"), KeyboardButton("📥 Ներբեռնումներ"))
+    markup.add(KeyboardButton("📂 Պատմություն"), KeyboardButton("💳 Վճարումներ"))
+    markup.add(KeyboardButton("🔔 Ծանուցումներ"), KeyboardButton("🌙 Գիշերային ռեժիմ"))
+    markup.add(KeyboardButton("🌐 Լեզու"), KeyboardButton("⚙️ Կարգավորումներ"))
+    markup.add(KeyboardButton("📢 Մեր ալիքը"), KeyboardButton("📞 Կապ"))
+    markup.add(KeyboardButton("ℹ️ Օգնություն"))
+
+    # Ուղարկում ենք դինամիկ ողջույնի հաղորդագրությունը և մենյուն
+    bot.send_message(
+        message.chat.id,
+        f"""
+{random_start}
+
+🤖 AI Օգնական
+🎬 Mini App
+⭐ Premium
+❤️ Ընտրյալներ
+📺 Նորություններ
+🎁 Բոնուսներ
+
+👇 Ընտրեք ցանկալի բաժինը։
+""",
+        parse_mode="HTML",
+        reply_markup=markup,
+    )
+
+
+# ==========================
+# TEXT HANDLERS (MENU)
+# ==========================
 
 
 @bot.message_handler(func=lambda m: m.text == "👤 Իմ պրոֆիլը")
 def profile(message):
-
     bot.send_message(
         message.chat.id,
         f"""
@@ -166,41 +158,31 @@ def profile(message):
 📅 Գրանցում
 Այսօր
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "⭐ Premium")
 def premium(message):
-
     bot.send_message(
         message.chat.id,
         """
 💎 <b>Premium</b>
 
 ✅ Առանց գովազդի
-
 ✅ Full HD
-
 ✅ Արագ սպասարկում
-
 ✅ Վաղ հասանելիություն
-
 ✅ Premium բաժին
 
 💳 Շուտով հնարավոր կլինի գնել։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "❤️ Ընտրյալներ")
 def favorites(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -208,15 +190,12 @@ def favorites(message):
 
 Դուք դեռ չունեք ընտրյալներ։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "🎁 Բոնուսներ")
 def bonus(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -226,15 +205,12 @@ def bonus(message):
 
 ⭐ Premium օգտատերերը ստանում են կրկնակի բոնուս։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "🎮 Խաղեր")
 def games(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -242,14 +218,12 @@ def games(message):
 
 Շուտով այստեղ կլինեն Telegram Mini Games։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
 
 
 @bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
 def news(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -257,15 +231,12 @@ def news(message):
 
 Այս պահին նորություններ չկան։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "📥 Ներբեռնումներ")
 def downloads(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -273,15 +244,12 @@ def downloads(message):
 
 Դուք դեռ ոչինչ չեք ներբեռնել։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "📂 Պատմություն")
 def history(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -289,57 +257,44 @@ def history(message):
 
 Դիտումների պատմությունը դատարկ է։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
 
 
 @bot.message_handler(func=lambda m: m.text == "💳 Վճարումներ")
 def payments(message):
-
     bot.send_message(
         message.chat.id,
         """
 💳 <b>Վճարումներ</b>
 
 Idram
-
 Telcell
-
 EasyPay
-
 Bank Card
-
 Telegram Stars
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "🔔 Ծանուցումներ")
 def notifications(message):
-
     bot.send_message(
         message.chat.id,
         """
 🔔 <b>Ծանուցումներ</b>
 
 ✅ Նոր սերիաներ
-
 ✅ Նոր ֆիլմեր
-
 ✅ Premium առաջարկներ
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
 
 
 @bot.message_handler(func=lambda m: m.text == "🌙 Գիշերային ռեժիմ")
 def dark_mode(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -347,60 +302,46 @@ def dark_mode(message):
 
 Շուտով հասանելի կլինի։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "🌐 Լեզու")
 def language(message):
-
     bot.send_message(
         message.chat.id,
         """
 🌐 <b>Լեզու</b>
 
 🇦🇲 Հայերեն
-
 🇬🇧 English
-
 🇷🇺 Русский
 
 Շուտով հնարավոր կլինի փոխել։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "⚙️ Կարգավորումներ")
 def settings(message):
-
     bot.send_message(
         message.chat.id,
         """
 ⚙️ <b>Կարգավորումներ</b>
 
 🤖 AI
-
 🌐 Լեզու
-
 🌙 Թեմա
-
 🔔 Ծանուցումներ
-
 💾 Հիշողություն
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
 
 
 @bot.message_handler(func=lambda m: m.text == "📢 Մեր ալիքը")
 def channel(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -408,15 +349,12 @@ def channel(message):
 
 Այստեղ կարող եք տեղադրել ձեր Telegram Channel-ի հղումը։
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "📞 Կապ")
 def contact(message):
-
     bot.send_message(
         message.chat.id,
         """
@@ -428,12 +366,94 @@ support@example.com
 💬 Telegram:
 @username
 """,
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
-
-
 
 
 @bot.message_handler(func=lambda m: m.text == "ℹ️ Օգնություն")
 def help_button(message):
     cmd_help(message)
+
+
+@bot.message_handler(func=lambda m: m.text == "🤖 AI")
+def ai_button(message):
+    bot.send_message(
+        message.chat.id,
+        """
+🤖 <b>AI Օգնական</b>
+
+Գրեք ձեր հարցը, և ես կպատասխանեմ։
+""",
+        parse_mode="HTML",
+    )
+
+
+# ==========================
+# AI CHAT HANDLER
+# ==========================
+@bot.message_handler(commands=["remember"], func=is_allowed)
+def cmd_remember(message):
+    parts = message.text.split(maxsplit=1)
+
+    if len(parts) < 2:
+        bot.send_message(message.chat.id, "Usage: /remember something")
+        return
+
+    note = parts[1].strip()
+    store.set(f"note:{message.from_user.id}", note)
+
+    bot.send_message(message.chat.id, "💾 Saved!")
+
+
+@bot.message_handler(commands=["recall"], func=is_allowed)
+def cmd_recall(message):
+    key = f"note:{message.from_user.id}"
+    note = store.get(key)
+
+    if not note:
+        bot.send_message(message.chat.id, "Nothing saved yet.")
+        return
+
+    bot.send_message(message.chat.id, f"🧠 Your note:\n{note}")
+    
+@bot.message_handler(commands=["quote"], func=is_allowed)
+def cmd_quote(message):
+    prompt = """
+Գրիր մեկ կարճ, ոգեշնչող մեջբերում հայերենով։ ✨
+
+Պահանջներ․
+- Ամեն անգամ նոր լինի։
+- 1-3 նախադասություն։
+- Օգտագործիր 1-3 համապատասխան emoji (✨💪🌟🔥😊)։
+- Մի մեջբերիր հայտնի մարդկանց։
+- Թող լինի օրիգինալ։
+- Մի գրիր բացատրություն կամ վերնագիր։
+"""
+    reply = ask_ai(message.from_user.id, prompt)
+    bot.send_message(message.chat.id, reply)
+@bot.message_handler(commands=["joke"], func=is_allowed)
+def cmd_joke(message):
+    prompt = """
+Պատմիր մեկ կարճ, զվարճալի անեկդոտ հայերենով։ 😂
+
+Պահանջներ․
+- Ամեն անգամ նոր անեկդոտ։
+- 2-5 տող։
+- Օգտագործիր համապատասխան emoji-ներ 😊😂🤣😅🙃։
+- Թող լինի մաքուր ու ընտանեկան հումոր։
+- Մի գրիր բացատրություն կամ նախաբան, միայն անեկդոտը։
+"""
+    reply = ask_ai(message.from_user.id, prompt)
+    bot.send_message(message.chat.id, reply)
+
+@bot.message_handler(func=lambda m: m.text and m.text not in MENU_BUTTONS)
+def ai_chat(message):
+    try:
+        bot.send_chat_action(message.chat.id, "typing")
+
+        reply = ask_ai(message.from_user.id, message.text)
+
+        bot.send_message(message.chat.id, reply)
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ AI սխալ\n{e}")
