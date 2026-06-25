@@ -324,7 +324,7 @@ def bonus(message):
     
     # Օգտագործում ենք inline կոճակ տելեգրամ ալիքի հղումով
     inline_markup = InlineKeyboardMarkup()
-    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="https://t.me/your_channel_username")) # Փոխարինեք ձեր ալիքի լինկով
+    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="t.me/hay_kino2026")) # Փոխարինեք ձեր ալիքի լինկով
     inline_markup.add(InlineKeyboardButton("✅ Ստուգել և ստանալ 50֏", callback_data="check_subscription"))
 
     bot.send_message(
@@ -569,7 +569,7 @@ def channel(message):
 support@example.com
 
 💬 Telegram:
-@username
+@Gareginyannn
 """,
         parse_mode="HTML",
         reply_markup=markup
@@ -589,7 +589,7 @@ def contact(message):
 support@example.com
 
 💬 Telegram:
-@username
+@Gareginyannn
 """,
         parse_mode="HTML",
         reply_markup=markup
