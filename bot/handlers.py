@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import random
-from telebot.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
+from telebot.types import KeyboardButton, ReplyKeyboardMarkup, WebAppInfo, LabeledPrice
 
 from bot.ai import ask_ai
 from bot.clients import BOT_INFO, bot, store
@@ -23,7 +23,6 @@ HELP_TEXTS = [
     "ℹ️ Կարող ես ինձ գրել ցանկացած բան 😄",
     "🧠 Ես կօգնեմ քեզ ինչ հարց էլ լինի",
     "💬 Գրիր ու կպատասխանեմ բնական ձևով",
-    
 ]
 
 MENU_BUTTONS = {
@@ -45,6 +44,8 @@ MENU_BUTTONS = {
     "📢 Մեր ալիքը",
     "📞 Կապ",
     "ℹ️ Օգնություն",
+    "⬅️ Հետ",
+    "1", "2", "3", "4", "5", "6"
 }
 
 
@@ -52,10 +53,72 @@ MENU_BUTTONS = {
 # COMMAND HANDLERS
 # ==========================
 
+@bot.message_handler(func=lambda m: m.text == "⭐ Premium")
+def premium(message):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("💳 Գնել Premium"))
+    markup.add(KeyboardButton("⬅️ Հետ"))
+
+    bot.send_message(
+        message.chat.id,
+        """
+💎 <b>HayKino Premium</b>
+
+✅ Առանց գովազդի
+✅ Full HD դիտում
+✅ Premium ֆիլմեր
+✅ Արագ հասանելիություն
+
+⭐ Գին՝ 100 Telegram Stars
+
+Ընտրեք գործողությունը։
+""",
+        parse_mode="HTML",
+        reply_markup=markup
+    )
+
+@bot.message_handler(func=lambda m: m.text == "💳 Գնել Premium")
+def buy_premium(message):
+    bot.send_invoice(
+        chat_id=message.chat.id,
+        title="HayKino Premium",
+        description="Premium 30 օր",
+        invoice_payload="premium_30_days",
+        provider_token="",
+        currency="XTR",
+        prices=[
+            LabeledPrice(
+                label="HayKino Premium 30 օր",
+                amount=100
+            )
+        ]
+    )
+
+
+@bot.pre_checkout_query_handler(func=lambda q: True)
+def checkout(query):
+    bot.answer_pre_checkout_query(
+        query.id,
+        ok=True
+    )
+
+
+@bot.message_handler(content_types=["successful_payment"])
+def payment_success(message):
+    bot.send_message(
+        message.chat.id,
+        """
+🎉 Վճարումը հաջողվեց։
+
+⭐ Ձեր HayKino Premium-ը ակտիվացված է։
+
+Բացեք Mini App-ը և օգտվեք Premium բաժնից։
+"""
+    )
+
 
 @bot.message_handler(commands=["help"], func=is_allowed)
 def cmd_help(message):
-    # Ընտրում է պատահական տեքստ HELP_TEXTS-ից
     random_help = random.choice(HELP_TEXTS)
     
     bot.send_message(
@@ -79,19 +142,18 @@ def cmd_help(message):
 
 📞 Հարցերի դեպքում գրեք մեզ։
 """,
-
         parse_mode="HTML",
     )
 
 
 @bot.message_handler(commands=["start"], func=is_allowed)
 def cmd_start(message):
-    # Ընտրում է պատահական ողջույն START_TEXTS-ից
+    # Մաքրում ենք խաղի ընթացիկ վիճակը, եթե օգտատերը վերադառնում է գլխավոր մենյու
+    store.delete(f"game_status:{message.from_user.id}")
+    
     random_start = random.choice(START_TEXTS).format(name=message.from_user.first_name)
 
-    # Ստեղծում ենք գլխավոր մենյուն
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-
     markup.add(
         KeyboardButton(
             text="🎬 Բացել Mini App",
@@ -108,7 +170,6 @@ def cmd_start(message):
     markup.add(KeyboardButton("📢 Մեր ալիքը"), KeyboardButton("📞 Կապ"))
     markup.add(KeyboardButton("ℹ️ Օգնություն"))
 
-    # Ուղարկում ենք դինամիկ ողջույնի հաղորդագրությունը և մենյուն
     bot.send_message(
         message.chat.id,
         f"""
@@ -131,7 +192,6 @@ def cmd_start(message):
 # ==========================
 # TEXT HANDLERS (MENU)
 # ==========================
-
 
 @bot.message_handler(func=lambda m: m.text == "👤 Իմ պրոֆիլը")
 def profile(message):
@@ -162,23 +222,85 @@ def profile(message):
     )
 
 
-@bot.message_handler(func=lambda m: m.text == "⭐ Premium")
-def premium(message):
+@bot.message_handler(func=lambda m: m.text == "🎮 Խաղեր")
+def games(message):
+    user_id = message.from_user.id
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Ստուգում ենք՝ արդյոք այսօր արդեն խաղացել է
+    last_played = store.get(f"game_date:{user_id}")
+    if last_played == today:
+        bot.send_message(
+            message.chat.id,
+            "❌ Դուք այսօր արդեն փորձել եք ձեր բախտը։ Սպասեք հաջորդ օրվան։ 🔄"
+        )
+        return
+
+    # Գրանցում ենք, որ օգտատերը խաղի սպասման մեջ է
+    store.set(f"game_status:{user_id}", "waiting_num")
+
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
+    markup.add(
+        KeyboardButton("1"), KeyboardButton("2"), KeyboardButton("3"),
+        KeyboardButton("4"), KeyboardButton("5"), KeyboardButton("6")
+    )
+    markup.add(KeyboardButton("⬅️ Հետ"))
+
     bot.send_message(
         message.chat.id,
         """
-💎 <b>Premium</b>
+🎮 <b>Բախտի Զառ</b>
 
-✅ Առանց գովազդի
-✅ Full HD
-✅ Արագ սպասարկում
-✅ Վաղ հասանելիություն
-✅ Premium բաժին
+Ընտրեք կամ գրեք 1-ից 6 թվերից մեկը։
+Եթե զառի թիվը համընկնի ձեր ընտրած թվի հետ, դուք կշահեք <b>Բոնուս Ֆիլմ Դրամ</b>։
 
-💳 Շուտով հնարավոր կլինի գնել։
+⚠️ <i>Հնարավորությունն ընձեռվում է օրական ընդամենը 1 անգամ։</i>
 """,
         parse_mode="HTML",
+        reply_markup=markup
     )
+
+
+@bot.message_handler(func=lambda m: m.text in ["1", "2", "3", "4", "5", "6"])
+def handle_dice_guess(message):
+    user_id = message.from_user.id
+    status = store.get(f"game_status:{user_id}")
+
+    if status != "waiting_num":
+        # Եթե խաղի մեջ չէ, սովորական տեքստային հարցում է
+        return ai_chat(message)
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    store.set(f"game_date:{user_id}", today) # Նշում ենք օրվա փորձը
+    store.delete(f"game_status:{user_id}") # Ավարտում ենք խաղի կարգավիճակը
+
+    guess = int(message.text)
+    
+    # Գցում ենք զառը Telegram-ի միջոցով
+    dice_msg = bot.send_dice(message.chat.id, emoji="🎲")
+    dice_value = dice_msg.dice.value
+
+    # Սպասում ենք մի փոքր, մինչև զառի անիմացիան ավարտվի
+    import time
+    time.sleep(3)
+
+    if guess == dice_value:
+        bot.send_message(
+            message.chat.id,
+            f"""
+🎉 <b>Շնորհավորում ենք։</b>
+Դուք գուշակեցիք ճիշտ թիվը ({guess})։
+
+🎁 Դուք ստացաք ձեր օրական բոնուսը՝ <b>Ֆիլմ Դրամ</b>։
+""",
+            parse_mode="HTML"
+        )
+    else:
+        bot.send_message(
+            message.chat.id,
+            f"😢 <b>Ափսոս, չհամընկավ։</b>\nԴուք ընտրել էիք {guess}, բայց նետվեց {dice_value}։\n\nՓորձեք վաղը։ 🤞",
+            parse_mode="HTML"
+        )
 
 
 @bot.message_handler(func=lambda m: m.text == "❤️ Ընտրյալներ")
@@ -209,19 +331,6 @@ def bonus(message):
     )
 
 
-@bot.message_handler(func=lambda m: m.text == "🎮 Խաղեր")
-def games(message):
-    bot.send_message(
-        message.chat.id,
-        """
-🎮 <b>Խաղեր</b>
-
-Շուտով այստեղ կլինեն Telegram Mini Games։
-""",
-        parse_mode="HTML",
-    )
-
-
 @bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
 def news(message):
     bot.send_message(
@@ -234,6 +343,9 @@ def news(message):
         parse_mode="HTML",
     )
 
+@bot.message_handler(func=lambda m: m.text == "⬅️ Հետ")
+def back_menu(message):
+    cmd_start(message)
 
 @bot.message_handler(func=lambda m: m.text == "📥 Ներբեռնումներ")
 def downloads(message):
@@ -293,19 +405,6 @@ def notifications(message):
     )
 
 
-@bot.message_handler(func=lambda m: m.text == "🌙 Գիշերային ռեժիմ")
-def dark_mode(message):
-    bot.send_message(
-        message.chat.id,
-        """
-🌙 <b>Գիշերային ռեժիմ</b>
-
-Շուտով հասանելի կլինի։
-""",
-        parse_mode="HTML",
-    )
-
-
 @bot.message_handler(func=lambda m: m.text == "🌐 Լեզու")
 def language(message):
     bot.send_message(
@@ -347,9 +446,13 @@ def channel(message):
         """
 📢 <b>Մեր ալիքը</b>
 
-Այստեղ կարող եք տեղադրել ձեր Telegram Channel-ի հղումը։
+📧 Email:
+support@example.com
+
+💬 Telegram:
+@username
 """,
-        parse_mode="HTML",
+        parse_mode="HTML"
     )
 
 
@@ -416,6 +519,7 @@ def cmd_recall(message):
 
     bot.send_message(message.chat.id, f"🧠 Your note:\n{note}")
     
+
 @bot.message_handler(commands=["quote"], func=is_allowed)
 def cmd_quote(message):
     prompt = """
@@ -431,6 +535,8 @@ def cmd_quote(message):
 """
     reply = ask_ai(message.from_user.id, prompt)
     bot.send_message(message.chat.id, reply)
+
+
 @bot.message_handler(commands=["joke"], func=is_allowed)
 def cmd_joke(message):
     prompt = """
@@ -445,6 +551,7 @@ def cmd_joke(message):
 """
     reply = ask_ai(message.from_user.id, prompt)
     bot.send_message(message.chat.id, reply)
+
 
 @bot.message_handler(func=lambda m: m.text and m.text not in MENU_BUTTONS)
 def ai_chat(message):
