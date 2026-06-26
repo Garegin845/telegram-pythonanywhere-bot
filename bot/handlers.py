@@ -324,7 +324,7 @@ def bonus(message):
     
     # Օգտագործում ենք inline կոճակ տելեգրամ ալիքի հղումով
     inline_markup = InlineKeyboardMarkup()
-    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="t.me/hay_kino2026")) # Փոխարինեք ձեր ալիքի լինկով
+    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="https://t.me/hay_kino2026")) # Ավելացվել է https:// պրոտոկոլը
     inline_markup.add(InlineKeyboardButton("✅ Ստուգել և ստանալ 50֏", callback_data="check_subscription"))
 
     bot.send_message(
@@ -346,8 +346,8 @@ def bonus(message):
 def check_subs(call):
     user_id = call.from_user.id
     try:
-        # Փոխարինեք @your_channel_username ձեր ալիքի ID-ով կամ username-ով
-        chat_member = bot.get_chat_member(chat_id="t.me/hay_kino2026", user_id=user_id)
+        # Ավելացվել է մաքուր @hay_kino2026 տարբերակը՝ Telegram-ի ճիշտ API կանչի համար
+        chat_member = bot.get_chat_member(chat_id="@hay_kino2026", user_id=user_id)
         if chat_member.status in ['member', 'administrator', 'creator']:
             # Ստուգում ենք արդյոք արդեն ստացել է բոնուսը
             already_received = store.get(f"bonus_received:{user_id}")
@@ -652,11 +652,11 @@ def cmd_quote(message):
 Գրիր մեկ կարճ, ոգեշնչող մեջբերում հայերենով։ ✨
 
 Պահանջներ․
-- Ամեն անգամ նոր լինի։
-- 1-3 նախադասություն։
-- Օգտագործիր 1-3 համապատասխան emoji (✨💪🌟🔥😊)։
-- Մի մեջբերիր հայտնի մարդկանց։
-- Թող լինի օրիգինալ։
+- Ամեն անգամ նոր լինի․
+- 1-3 նախադասություն․
+- Օգտագործիր 1-3 համապատասխան emoji (✨💪🌟🔥😊)․
+- Մի մեջբերիր հայտնի մարդկանց․
+- Թող լինի օրիգինալ․
 - Մի գրիր բացատրություն կամ վերնագիր։
 """
     reply = ask_ai(message.from_user.id, prompt)
@@ -669,10 +669,10 @@ def cmd_joke(message):
 Պատմիր մեկ կարճ, զվարճալի անեկդոտ հայերենով։ 😂
 
 Պահանջներ․
-- Ամեն անգամ նոր անեկդոտ։
-- 2-5 տող։
-- Օգտագործիր համապատասխան emoji-ներ 😊😂🤣😅🙃։
-- Թող լինի մաքուր ու ընտանեկան հումոր։
+- Ամեն անգամ նոր անեկդոտ․
+- 2-5 տող․
+- Օգտագործիր համապատասխան emoji-ներ 😊😂🤣😅🙃․
+- Թող լինի մաքուր ու ընտանեկան հումոր․
 - Մի գրիր բացատրություն կամ նախաբան, միայն անեկդոտը։
 """
     reply = ask_ai(message.from_user.id, prompt)
