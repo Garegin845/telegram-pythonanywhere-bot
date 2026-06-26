@@ -362,7 +362,7 @@ def check_subs(call):
         else:
             bot.answer_callback_query(call.id, "❌ Դուք դեռ չեք բաժանորդագրվել ալիքին:", show_alert=True)
     except Exception as e:
-        bot.answer_callback_query(call.id, "⚠️ Ստուգման սխալ: Համոզվեք, որ բոտը ալիքում ադմինիստրատոր է:", show_alert=True)
+        bot.answer_callback_query(call.id, "⚠️ Ստուգման սխալ:", show_alert=True)
 
 
 @bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
