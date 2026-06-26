@@ -347,7 +347,7 @@ def check_subs(call):
     user_id = call.from_user.id
     try:
         # Փոխարինեք @your_channel_username ձեր ալիքի ID-ով կամ username-ով
-        chat_member = bot.get_chat_member(chat_id="@your_channel_username", user_id=user_id)
+        chat_member = bot.get_chat_member(chat_id="t.me/hay_kino2026", user_id=user_id)
         if chat_member.status in ['member', 'administrator', 'creator']:
             # Ստուգում ենք արդյոք արդեն ստացել է բոնուսը
             already_received = store.get(f"bonus_received:{user_id}")
