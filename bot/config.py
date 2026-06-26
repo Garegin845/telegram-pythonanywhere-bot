@@ -70,7 +70,7 @@ def _bootstrap_webhook_secret(file_path: Path = _WEBHOOK_SECRET_FILE) -> str:
 
 
 # Telegram
-TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN8228064505:AAEHUALrX0zfQFmqk5oa2xJD6KanRNJdm2w"].strip()
+TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"].strip()
 WEBHOOK_SECRET = _bootstrap_webhook_secret()
 
 # When set, the bot auto-registers this URL as the Telegram webhook on
