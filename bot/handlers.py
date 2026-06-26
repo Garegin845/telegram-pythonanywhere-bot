@@ -345,28 +345,66 @@ def bonus(message):
 @bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
 def check_subs(call):
     user_id = call.from_user.id
-    try:
-        # Ավելացվել է մաքուր @hay_kino2026 տարբերակը՝ Telegram-ի ճիշտ API կանչի համար
-        chat_member = bot.get_chat_member(chat_id="@hay_kino2026", user_id=user_id)
-        if chat_member.status in ['member', 'administrator', 'creator']:
-            # Ստուգում ենք արդյոք արդեն ստացել է բոնուսը
-            already_received = store.get(f"bonus_received:{user_id}")
-            if already_received:
-                bot.answer_callback_query(call.id, "❌ Դուք արդեն ստացել եք այս բոնուսը:", show_alert=True)
-            else:
-                # Ավելացնում ենք 50 դրամ հաշվին
-                current_balance = store.get(f"balance:{user_id}")
-                balance = float(current_balance) if current_balance else 0.0
-                balance += 50.0
-                store.set(f"balance:{user_id}", str(balance))
-                store.set(f"bonus_received:{user_id}", "true")
-                
-                bot.answer_callback_query(call.id, "🎉 Շնորհավոր! 50 դրամը փոխանցվեց ձեր հաշվին:", show_alert=True)
-        else:
-            bot.answer_callback_query(call.id, "❌ Դուք դեռ չեք բաժանորդագրվել ալիքին:", show_alert=True)
-    except Exception as e:
-        bot.answer_callback_query(call.id, "⚠️ Չհաջողվեց ստուգել բաժանորդագրությունը: Փորձեք ավելի ուշ:", show_alert=True)
 
+    try:
+        member = bot.get_chat_member(
+            chat_id="@hay_kino2026",
+            user_id=user_id
+        )
+
+        print("USER STATUS:", member.status)
+
+        if member.status in ["member", "administrator", "creator"]:
+            already_received = store.get(
+                f"bonus_received:{user_id}"
+            )
+
+            if already_received:
+                bot.answer_callback_query(
+                    call.id,
+                    "❌ Դուք արդեն ստացել եք բոնուսը",
+                    show_alert=True
+                )
+                return
+
+            balance = store.get(
+                f"balance:{user_id}"
+            )
+
+            balance = float(balance or 0)
+            balance += 50
+
+            store.set(
+                f"balance:{user_id}",
+                str(balance)
+            )
+
+            store.set(
+                f"bonus_received:{user_id}",
+                "true"
+            )
+
+            bot.answer_callback_query(
+                call.id,
+                "🎉 +50 դրամ ավելացվեց",
+                show_alert=True
+            )
+
+        else:
+            bot.answer_callback_query(
+                call.id,
+                "❌ Նախ միացեք ալիքին",
+                show_alert=True
+            )
+
+    except Exception as e:
+        print("CHECK SUB ERROR:", e)
+
+        bot.answer_callback_query(
+            call.id,
+            "⚠️ Ստուգման սխալ",
+            show_alert=True
+        )
 
 @bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
 def news(message):
