@@ -322,9 +322,8 @@ def bonus(message):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton("⬅️ Հետ"))
     
-    # Օգտագործում ենք inline կոճակ տելեգրամ ալիքի հղումով
     inline_markup = InlineKeyboardMarkup()
-    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="https://t.me/hay_kino2026")) # Ավելացվել է https:// պրոտոկոլը
+    inline_markup.add(InlineKeyboardButton("📢 Միանալ Ալիքին", url="https://t.me/hay_kino2026")) 
     inline_markup.add(InlineKeyboardButton("✅ Ստուգել և ստանալ 50֏", callback_data="check_subscription"))
 
     bot.send_message(
@@ -345,66 +344,26 @@ def bonus(message):
 @bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
 def check_subs(call):
     user_id = call.from_user.id
-
     try:
-        member = bot.get_chat_member(
-            chat_id="@hay_kino2026",
-            user_id=user_id
-        )
-
-        print("USER STATUS:", member.status)
-
-        if member.status in ["member", "administrator", "creator"]:
-            already_received = store.get(
-                f"bonus_received:{user_id}"
-            )
-
+        # ՈՒՂՂՎԱԾ Է. Ալիքի username-ը պետք է սկսվի @ նշանով, ոչ թե t.me ֆորմատով, որպեսզի Telegram API-ն հասկանա
+        chat_member = bot.get_chat_member(chat_id="@hay_kino2026", user_id=user_id)
+        if chat_member.status in ['member', 'administrator', 'creator']:
+            already_received = store.get(f"bonus_received:{user_id}")
             if already_received:
-                bot.answer_callback_query(
-                    call.id,
-                    "❌ Դուք արդեն ստացել եք բոնուսը",
-                    show_alert=True
-                )
-                return
-
-            balance = store.get(
-                f"balance:{user_id}"
-            )
-
-            balance = float(balance or 0)
-            balance += 50
-
-            store.set(
-                f"balance:{user_id}",
-                str(balance)
-            )
-
-            store.set(
-                f"bonus_received:{user_id}",
-                "true"
-            )
-
-            bot.answer_callback_query(
-                call.id,
-                "🎉 +50 դրամ ավելացվեց",
-                show_alert=True
-            )
-
+                bot.answer_callback_query(call.id, "❌ Դուք արդեն ստացել եք այս բոնուսը:", show_alert=True)
+            else:
+                current_balance = store.get(f"balance:{user_id}")
+                balance = float(current_balance) if current_balance else 0.0
+                balance += 50.0
+                store.set(f"balance:{user_id}", str(balance))
+                store.set(f"bonus_received:{user_id}", "true")
+                
+                bot.answer_callback_query(call.id, "🎉 Շնորհավոր! 50 դրամը փոխանցվեց ձեր հաշվին:", show_alert=True)
         else:
-            bot.answer_callback_query(
-                call.id,
-                "❌ Նախ միացեք ալիքին",
-                show_alert=True
-            )
-
+            bot.answer_callback_query(call.id, "❌ Դուք դեռ չեք բաժանորդագրվել ալիքին:", show_alert=True)
     except Exception as e:
-        print("CHECK SUB ERROR:", e)
+        bot.answer_callback_query(call.id, "⚠️ Ստուգման սխալ: Համոզվեք, որ բոտը ալիքում ադմինիստրատոր է:", show_alert=True)
 
-        bot.answer_callback_query(
-            call.id,
-            "⚠️ Ստուգման սխալ",
-            show_alert=True
-        )
 
 @bot.message_handler(func=lambda m: m.text == "📺 Նորություններ")
 def news(message):
@@ -451,7 +410,6 @@ def history(message):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton("⬅️ Հետ"))
     
-    # Ցուցադրում ենք օգտատիրոջ դիտած ֆիլմերը (ստատիկ կամ բազայից)
     bot.send_message(
         message.chat.id,
         """
@@ -535,7 +493,7 @@ def balance_handler(message):
 @bot.message_handler(func=lambda m: m.text == "🌐 Լեզու")
 def language(message):
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-    markup.add(KeyboardButton("🇦🇲 Հայերեն"), KeyboardButton("🇷🇺 Русский"), KeyboardButton("🇬🇧 English"))
+    markup.add(KeyboardButton("🇦🇲 Հայերեն"), KeyboardButton("🇷🇺 Русский"), KeyboardButton("🇬бах English"))
     markup.add(KeyboardButton("⬅️ Հետ"))
     bot.send_message(
         message.chat.id,
@@ -556,7 +514,6 @@ def set_language_preference(message):
     user_id = message.from_user.id
     selected_lang = message.text
 
-    # Պահպանում ենք ընտրված լեզուն
     store.set(f"user_lang:{user_id}", selected_lang)
 
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -656,7 +613,7 @@ def ai_button(message):
 
 
 # ==========================
-# AI CHAT HANDLER
+# AI CHAT HANDLERS
 # ==========================
 @bot.message_handler(commands=["remember"], func=is_allowed)
 def cmd_remember(message):
